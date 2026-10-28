@@ -32,12 +32,16 @@ export const VEHICLES: Record<VehicleClass, { label: string; multiplier: number 
 /** Média aproximada da tarifa de carro por km em rodovias pedagiadas (referência: SP e federais) */
 export const DEFAULT_TOLL_RATE = 0.16
 
+/** Tarifa média de carro por praça, usada quando a pessoa não informa o valor real */
+export const DEFAULT_PLAZA_PRICE = 10
+
 export interface CostSettings {
   fuel: FuelType
   consumption: number
   price: number
   vehicle: VehicleClass
   tollRate: number
+  plazaPrice: number
   people: number
   /** true depois que a pessoa informa o consumo ou o preço do próprio carro */
   custom?: boolean
@@ -49,6 +53,7 @@ export const DEFAULT_COST: CostSettings = {
   price: FUEL_PRESETS.gasolina.price,
   vehicle: 'carro',
   tollRate: DEFAULT_TOLL_RATE,
+  plazaPrice: DEFAULT_PLAZA_PRICE,
   people: 1,
   custom: false,
 }
@@ -87,6 +92,9 @@ export interface CostBreakdown {
   tollEstimate: number
   tollCost: number
   tollIsManual: boolean
+  /** De onde veio o valor do pedágio */
+  tollSource: TollSource
+  plazaCount: number
   total: number
   perPerson: number
   perKm: number
@@ -102,11 +110,37 @@ export function tollEstimateFor(tollMeters: number, s: CostSettings): number {
   return (tollMeters / 1000) * Math.max(0, s.tollRate) * VEHICLES[s.vehicle].multiplier
 }
 
-export function computeCost(distance: number, tollDistance: number, s: CostSettings, manualToll: number | null): CostBreakdown {
+export type TollSource = 'manual' | 'plazas' | 'km' | 'none'
+
+export interface TollInput {
+  tollDistance: number
+  /** Praças detectadas, com o valor real quando informado; null enquanto a busca não terminou ou falhou */
+  plazas: { manual: number | null }[] | null
+}
+
+/** Preço de uma praça: o valor informado ou a tarifa média ajustada à categoria do veículo */
+export function plazaPriceFor(manual: number | null, s: CostSettings): number {
+  return manual !== null && manual >= 0 ? manual : Math.max(0, s.plazaPrice) * VEHICLES[s.vehicle].multiplier
+}
+
+/** Abaixo disso a marcação de via pedagiada é ruído (ex.: acesso a uma praça) */
+const MIN_TOLL_DISTANCE = 500
+
+export function computeCost(distance: number, toll: TollInput, s: CostSettings, manualToll: number | null): CostBreakdown {
   const fuelAmount = s.consumption > 0 ? distance / 1000 / s.consumption : 0
   const fuelCost = fuelCostFor(distance, s)
-  const tollEstimate = tollEstimateFor(tollDistance, s)
+  const plazaCount = toll.plazas?.length ?? 0
+  let tollEstimate = 0
+  let tollSource: TollSource = 'none'
+  if (plazaCount) {
+    tollEstimate = toll.plazas!.reduce((sum, p) => sum + plazaPriceFor(p.manual, s), 0)
+    tollSource = 'plazas'
+  } else if (toll.tollDistance >= MIN_TOLL_DISTANCE) {
+    tollEstimate = tollEstimateFor(toll.tollDistance, s)
+    tollSource = 'km'
+  }
   const tollIsManual = manualToll !== null && manualToll >= 0
+  if (tollIsManual) tollSource = 'manual'
   const tollCost = tollIsManual ? manualToll! : tollEstimate
   const total = fuelCost + tollCost
   return {
@@ -115,6 +149,8 @@ export function computeCost(distance: number, tollDistance: number, s: CostSetti
     tollEstimate,
     tollCost,
     tollIsManual,
+    tollSource,
+    plazaCount,
     total,
     perPerson: total / Math.max(1, Math.round(s.people)),
     perKm: distance > 0 ? total / (distance / 1000) : 0,

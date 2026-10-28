@@ -9,6 +9,7 @@ import { MapView, type MapPoint } from './components/MapView'
 import { Comparison, DriverSteps, ExportPanel, Itinerary, Summary } from './components/Results'
 import { CostPanel } from './components/CostPanel'
 import { CONSUMPTION_INPUT_ID, VehicleCard } from './components/VehicleCard'
+import { fetchPlazas, type TollPlaza } from './lib/tolls'
 import { DEFAULT_COST, FUEL_PRESETS, VEHICLES, computeCost, formatMoney, inferCustom, type CostSettings } from './lib/cost'
 import { MAX_STOPS, computePlan, validate } from './lib/planner'
 import { reversePlace } from './lib/geocode'
@@ -17,6 +18,16 @@ import { decodePlan, encodePlan, unpack } from './lib/share'
 
 const STORAGE_KEY = 'rota:v1'
 const COST_KEY = 'rota:custos:v1'
+const PLAZA_PRICES_KEY = 'rota:pracas:v1'
+
+function loadPlazaPrices(): Record<string, number> {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PLAZA_PRICES_KEY) ?? '{}') as Record<string, unknown>
+    return Object.fromEntries(Object.entries(saved).filter((e): e is [string, number] => typeof e[1] === 'number' && e[1] >= 0))
+  } catch {
+    return {}
+  }
+}
 
 function loadCost(): CostSettings {
   try {
@@ -97,6 +108,45 @@ export default function App() {
   const [costSettings, setCostSettings] = useState<CostSettings>(loadCost)
   // valor real informado vale só para a rota calculada
   const [manualToll, setManualToll] = useState<number | null>(null)
+  // praças de pedágio da rota atual; ficam ligadas ao resultado para não misturar rotas
+  const [plazaSearch, setPlazaSearch] = useState<{ result: RouteResult; status: 'loading' | 'ok' | 'error'; plazas: TollPlaza[] } | null>(null)
+  const [plazaPrices, setPlazaPrices] = useState<Record<string, number>>(loadPlazaPrices)
+
+  useEffect(() => {
+    if (!result) return
+    if (result.avoidTolls) {
+      setPlazaSearch({ result, status: 'ok', plazas: [] })
+      return
+    }
+    const ctrl = new AbortController()
+    setPlazaSearch({ result, status: 'loading', plazas: [] })
+    fetchPlazas(
+      result.legs.map((l) => l.geometry),
+      ctrl.signal,
+    )
+      .then((plazas) => setPlazaSearch({ result, status: 'ok', plazas }))
+      .catch((e: Error) => {
+        if (e.name !== 'AbortError') setPlazaSearch({ result, status: 'error', plazas: [] })
+      })
+    return () => ctrl.abort()
+  }, [result])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(PLAZA_PRICES_KEY, JSON.stringify(plazaPrices))
+    } catch {
+      /* sem persistência */
+    }
+  }, [plazaPrices])
+
+  const setPlazaPrice = useCallback((key: string, value: number | null) => {
+    setPlazaPrices((prev) => {
+      const next = { ...prev }
+      if (value === null) delete next[key]
+      else next[key] = value
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     try {
@@ -246,7 +296,17 @@ export default function App() {
     [origin, stops, destination, endMode, criterion, avoidTolls],
   )
 
-  const cost = result ? computeCost(result.distance, result.tollDistance, costSettings, manualToll) : null
+  const plazaState = plazaSearch && plazaSearch.result === result ? plazaSearch : null
+  const plazas = plazaState?.status === 'ok' ? plazaState.plazas : null
+  const plazaCounts = plazas && result ? result.legs.map((_, i) => plazas.filter((p) => p.leg === i).length) : null
+  const cost = result
+    ? computeCost(
+        result.distance,
+        { tollDistance: result.tollDistance, plazas: plazas?.map((p) => ({ manual: plazaPrices[p.key] ?? null })) ?? null },
+        costSettings,
+        manualToll,
+      )
+    : null
   const costLine = cost
     ? `Custo estimado: ${formatMoney(cost.total)} (combustível ${formatMoney(cost.fuelCost)} + pedágio ${formatMoney(cost.tollCost)})${
         costSettings.people > 1 ? ` · ${formatMoney(cost.perPerson)} por pessoa` : ''
@@ -456,7 +516,13 @@ export default function App() {
               )}
               <Summary result={result} cost={cost!.total} />
               <Comparison result={result} settings={costSettings} onApply={applyOptimizedOrder} />
-              <CostPanel result={result} settings={costSettings} manualToll={manualToll} onSettings={setCostSettings}
+              <CostPanel
+                result={result}
+                cost={cost!}
+                toll={{ status: plazaState?.status ?? 'loading', plazas: plazas ?? [], prices: plazaPrices, onPrice: setPlazaPrice }}
+                settings={costSettings}
+                manualToll={manualToll}
+                onSettings={setCostSettings}
                 onManualToll={setManualToll}
                 onEditCar={() => {
                   const input = document.getElementById(CONSUMPTION_INPUT_ID)
@@ -464,13 +530,14 @@ export default function App() {
                   input?.focus({ preventScroll: true })
                 }}
               />
-              <Itinerary result={result} onHover={setHighlightLeg} />
+              <Itinerary result={result} plazaCounts={plazaCounts} onHover={setHighlightLeg} />
               <ExportPanel result={result} shareUrl={shareUrl} costLine={costLine} />
               <p className="flex items-start gap-2 text-sm text-ink-soft">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" /> Tempo estimado sem trânsito em tempo real. Busca e rotas usam serviços públicos do OpenStreetMap, que às vezes ficam indisponíveis.
               </p>
               <DriverSteps
                 result={result}
+                plazaCounts={plazaCounts}
                 onHover={setHighlightLeg}
                 onFocus={(ll) => {
                   setFocus(ll)
@@ -493,6 +560,7 @@ export default function App() {
             <MapView
               visibleKey={mobileView}
               points={mapPoints}
+              plazas={stale ? [] : (plazas ?? [])}
               result={result}
               stale={stale}
               highlightLeg={highlightLeg}

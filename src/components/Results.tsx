@@ -96,7 +96,14 @@ export function Comparison({ result, settings, onApply }: { result: RouteResult;
   )
 }
 
-export function Itinerary({ result, onHover }: { result: RouteResult; onHover: (leg: number | null) => void }) {
+/** Selo de pedágio do trecho: número de praças quando conhecido, senão a marcação de via pedagiada */
+function tollBadge(result: RouteResult, plazaCounts: number[] | null | undefined, i: number): string | null {
+  const n = plazaCounts?.[i]
+  if (plazaCounts) return n ? `${n} ${n === 1 ? 'pedágio' : 'pedágios'}` : null
+  return result.legs[i].tollDistance >= 500 ? `pedágio · ${formatDistance(result.legs[i].tollDistance)}` : null
+}
+
+export function Itinerary({ result, plazaCounts, onHover }: { result: RouteResult; plazaCounts?: number[] | null; onHover: (leg: number | null) => void }) {
   const last = result.sequence.length - 1
   return (
     <section className="rounded-2xl border border-paper-line bg-paper-card p-4">
@@ -141,7 +148,7 @@ export function Itinerary({ result, onHover }: { result: RouteResult; onHover: (
                   className="my-1.5 inline-block rounded-full bg-paper px-2.5 py-0.5 font-mono text-[11px] text-ink-soft"
                 >
                   ↓ {formatDistance(leg.distance)} · {formatDuration(leg.duration)}
-                  {leg.tollDistance >= 500 && <span className="ml-1.5 text-[#9a6a1c]">· pedágio</span>}
+                  {tollBadge(result, plazaCounts, i) && <span className="ml-1.5 text-[#9a6a1c]">· {tollBadge(result, plazaCounts, i)}</span>}
                   {leg.hasFerry && <span className="ml-1.5 text-[#9a6a1c]">· balsa</span>}
                 </div>
               )}
@@ -204,7 +211,17 @@ export function ExportPanel({ result, shareUrl, costLine }: { result: RouteResul
   )
 }
 
-export function DriverSteps({ result, onHover, onFocus }: { result: RouteResult; onHover: (leg: number | null) => void; onFocus: (ll: [number, number]) => void }) {
+export function DriverSteps({
+  result,
+  plazaCounts,
+  onHover,
+  onFocus,
+}: {
+  result: RouteResult
+  plazaCounts?: number[] | null
+  onHover: (leg: number | null) => void
+  onFocus: (ll: [number, number]) => void
+}) {
   const [open, setOpen] = useState<Set<number>>(() => new Set([0]))
   const toggle = (i: number) =>
     setOpen((s) => {
@@ -232,8 +249,8 @@ export function DriverSteps({ result, onHover, onFocus }: { result: RouteResult;
                     <span className="text-ink-soft">
                       {formatDistance(leg.distance)} · {formatDuration(leg.duration)}
                     </span>
-                    {leg.tollDistance >= 500 && (
-                      <span className="rounded-full bg-sun-soft px-2 py-0.5 font-mono text-[11px] text-[#9a6a1c]">pedágio · {formatDistance(leg.tollDistance)}</span>
+                    {tollBadge(result, plazaCounts, i) && (
+                      <span className="rounded-full bg-sun-soft px-2 py-0.5 font-mono text-[11px] text-[#9a6a1c]">{tollBadge(result, plazaCounts, i)}</span>
                     )}
                   </div>
                   <div className="truncate text-sm text-ink-soft">

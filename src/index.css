@@ -37,6 +37,21 @@ body {
 .rota-pin--stop { background: #fff; color: #26495c; border-color: #26495c; }
 .rota-pin--dest { background: #e8a63c; color: #1b3644; }
 
+/* praça de pedágio detectada */
+.rota-toll {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  background: #e8a63c;
+  color: #1b3644;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 6px rgba(27, 54, 68, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 700 11px 'JetBrains Mono', monospace;
+}
+
 .leaflet-container { font-family: inherit; background: #ece8e1; }
 /* suaviza as cores do OpenStreetMap para combinar com a paleta do app */
 .rota-tiles { filter: saturate(0.7) contrast(0.95) brightness(1.02); }

@@ -13,12 +13,15 @@ export function NumberField({
   suffix,
   invalid,
   id,
+  hideLabel,
 }: {
   label: string
   prefix?: string
   suffix?: string
   invalid?: boolean
   id?: string
+  /** Mantém o rótulo só para leitores de tela */
+  hideLabel?: boolean
   value: number | null
   onChange: (v: number | null) => void
   placeholder?: string
@@ -33,7 +36,7 @@ export function NumberField({
   }, [value])
   return (
     <label className="grid gap-1">
-      <span className="text-sm text-ink-soft">{label}</span>
+      <span className={hideLabel ? 'sr-only' : 'text-sm text-ink-soft'}>{label}</span>
       <span
         className={`flex items-center gap-1.5 rounded-xl border bg-white px-3 py-2 focus-within:border-ink ${invalid ? 'border-sun' : 'border-paper-line'}`}
       >
