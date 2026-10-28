@@ -39,3 +39,26 @@ describe('parseNumber', () => {
     expect(parseNumber('')).toBeNull()
   })
 })
+
+describe('fuelWarning', async () => {
+  const { fuelWarning, fuelCostPerKm, inferCustom } = await import('./cost')
+  it('aceita valores normais e aponta os improváveis', () => {
+    expect(fuelWarning({ ...DEFAULT_COST, consumption: 13.5, price: 5.89 })).toBeNull()
+    expect(fuelWarning({ ...DEFAULT_COST, consumption: 0 })).toMatch(/quantos km/)
+    expect(fuelWarning({ ...DEFAULT_COST, price: 0 })).toMatch(/preço do litro/)
+    expect(fuelWarning({ ...DEFAULT_COST, consumption: 150 })).toMatch(/150 km\/l é incomum/)
+    expect(fuelWarning({ ...DEFAULT_COST, price: 62.9 })).toMatch(/incomum/)
+    expect(fuelWarning({ ...DEFAULT_COST, fuel: 'gnv', consumption: 0 })).toMatch(/por m³/)
+  })
+
+  it('calcula o custo por km rodado', () => {
+    expect(fuelCostPerKm({ ...DEFAULT_COST, consumption: 10, price: 6 })).toBeCloseTo(0.6)
+    expect(fuelCostPerKm({ ...DEFAULT_COST, consumption: 0 })).toBe(0)
+  })
+
+  it('reconhece valores salvos por versões anteriores como do usuário', () => {
+    expect(inferCustom({ ...DEFAULT_COST, custom: undefined })).toBe(false)
+    expect(inferCustom({ ...DEFAULT_COST, custom: undefined, consumption: 14 })).toBe(true)
+    expect(inferCustom({ ...DEFAULT_COST, custom: false, consumption: 14 })).toBe(false)
+  })
+})

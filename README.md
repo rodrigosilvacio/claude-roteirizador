@@ -13,6 +13,7 @@ Planeje uma rota com até 25 paradas, veja no mapa e deixe o sistema encontrar a
 | Layout de app web | No computador e no tablet, painel lateral com rolagem própria e mapa em tela cheia ao lado. No celular, botão “Ver mapa” abre o mapa em tela cheia. |
 | Mapa interativo | Clique no mapa para adicionar parada, partida ou destino. Arraste os pinos para ajustar o ponto exato. Passe o mouse num trecho para destacá-lo. |
 | Trajeto do motorista | Instruções curva a curva em português, por trecho, com código da rodovia e sentido. Clique numa instrução para vê-la no mapa. |
+| Seu carro | Bloco sempre visível no formulário para informar quantos km o carro faz por litro e o preço do litro no seu posto, antes mesmo de calcular. Mostra o custo por km rodado, sinaliza quando ainda são valores de referência e avisa sobre números improváveis (ex.: 145 km/l). |
 | Custo da viagem | Combustível (gasolina, etanol, diesel ou GNV, com consumo e preço editáveis) mais pedágio, com custo por km e divisão entre pessoas. Entra no resumo, na comparação de ordens e no texto do WhatsApp. |
 | Pedágio | Detecta os km em rodovia pedagiada em cada trecho e estima o valor pela tarifa média por km, com multiplicador por categoria de veículo (moto a caminhão 4 eixos). Se você souber o valor real, ele substitui a estimativa. Opção **evitar pedágios** recalcula a rota fora delas. Avisa quando há balsa. |
 | Levar para a estrada | Google Maps (rotas com mais de 9 paradas viram links encadeados), Waze por parada, WhatsApp, link compartilhável e impressão. |
