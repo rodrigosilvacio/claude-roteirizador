@@ -32,6 +32,10 @@ export interface Leg {
   toTag: string
   distance: number
   duration: number
+  /** Metros percorridos em vias marcadas como pedagiadas */
+  tollDistance: number
+  /** O trecho inclui travessia de balsa (custo não estimado) */
+  hasFerry: boolean
   steps: Step[]
   geometry: [number, number][] // [lat, lon]
 }
@@ -48,6 +52,8 @@ export interface RouteResult {
   legs: Leg[]
   distance: number
   duration: number
+  tollDistance: number
+  avoidTolls: boolean
   optimized: boolean
   criterion: Criterion
   /** Comparação com a ordem digitada, presente só quando a rota foi otimizada */

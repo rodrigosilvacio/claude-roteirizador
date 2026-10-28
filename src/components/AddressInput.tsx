@@ -90,7 +90,7 @@ export function AddressInput({ query, place, badge, placeholder, bias, onQuery, 
   return (
     <div className="relative">
       <div
-        className={`flex items-center gap-3 rounded-2xl border bg-paper-card px-3 py-2.5 transition focus-within:border-ink focus-within:ring-2 focus-within:ring-ink/15 ${
+        className={`flex items-center gap-3 rounded-xl border bg-paper-card px-2 py-1.5 transition focus-within:border-ink focus-within:ring-2 focus-within:ring-ink/15 ${
           coarse || place?.approximate ? 'border-sun' : 'border-paper-line'
         }`}
       >
@@ -106,7 +106,7 @@ export function AddressInput({ query, place, badge, placeholder, bias, onQuery, 
           onFocus={() => results.length && setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 150)}
           placeholder={placeholder}
-          className="min-w-0 flex-1 bg-transparent text-[17px] text-ink-deep placeholder:text-ink-soft/60 focus:outline-none"
+          className="min-w-0 flex-1 bg-transparent text-[15px] text-ink-deep placeholder:text-ink-soft/60 focus:outline-none"
           role="combobox"
           aria-expanded={open}
           aria-controls={listId}
@@ -124,7 +124,7 @@ export function AddressInput({ query, place, badge, placeholder, bias, onQuery, 
             className="rounded-full p-1 text-ink-soft hover:bg-paper hover:text-ink"
             aria-label="Limpar endereço"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4" />
           </button>
         )}
       </div>
@@ -137,7 +137,7 @@ export function AddressInput({ query, place, badge, placeholder, bias, onQuery, 
         <ul
           id={listId}
           role="listbox"
-          className="absolute left-0 right-0 z-[1000] mt-1.5 overflow-hidden rounded-2xl border border-paper-line bg-white shadow-xl shadow-ink/10"
+          className="absolute left-0 right-0 z-[1000] mt-1 overflow-hidden rounded-xl border border-paper-line bg-white shadow-xl shadow-ink/10"
         >
           {error && !results.length && <li className="px-4 py-3 text-sm text-ink-soft">{error}</li>}
           {results.map((r, i) => {
@@ -152,7 +152,7 @@ export function AddressInput({ query, place, badge, placeholder, bias, onQuery, 
                   choose(r)
                 }}
                 onMouseEnter={() => setActive(i)}
-                className={`flex cursor-pointer items-start gap-3 px-4 py-2.5 ${i === active ? 'bg-paper' : ''}`}
+                className={`flex cursor-pointer items-start gap-3 px-3 py-2 text-sm ${i === active ? 'bg-paper' : ''}`}
               >
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-ink-soft" />
                 <div className="min-w-0 flex-1">
@@ -185,7 +185,7 @@ export function Badge({ tag, variant }: { tag: string; variant: 'origin' | 'stop
         ? 'bg-sun text-ink-deep'
         : 'border-2 border-ink bg-paper-card text-ink'
   return (
-    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-mono text-sm font-semibold ${cls}`}>
+    <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full font-mono text-xs font-semibold ${cls}`}>
       {tag}
     </span>
   )

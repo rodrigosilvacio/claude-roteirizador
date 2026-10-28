@@ -10,15 +10,18 @@ Planeje uma rota com até 25 paradas, veja no mapa e deixe o sistema encontrar a
 | Três formas de terminar | **Destino fixo**, **volta à partida** (circuito) ou **melhor final** (o sistema escolhe a última parada). |
 | Otimização | Por **menor tempo** ou **menor distância**. Até 12 paradas o resultado é o ótimo exato (programação dinâmica Held-Karp); acima disso, vizinho mais próximo com melhorias 2-opt e or-opt. Nunca entrega uma ordem pior que a digitada. |
 | Comparação | Mostra quanto a ordem otimizada economiza frente à digitada, e diz claramente quando a ordem digitada já era a melhor. Um clique reordena os campos na sequência otimizada. |
+| Layout de app web | No computador e no tablet, painel lateral com rolagem própria e mapa em tela cheia ao lado. No celular, botão “Ver mapa” abre o mapa em tela cheia. |
 | Mapa interativo | Clique no mapa para adicionar parada, partida ou destino. Arraste os pinos para ajustar o ponto exato. Passe o mouse num trecho para destacá-lo. |
 | Trajeto do motorista | Instruções curva a curva em português, por trecho, com código da rodovia e sentido. Clique numa instrução para vê-la no mapa. |
+| Custo da viagem | Combustível (gasolina, etanol, diesel ou GNV, com consumo e preço editáveis) mais pedágio, com custo por km e divisão entre pessoas. Entra no resumo, na comparação de ordens e no texto do WhatsApp. |
+| Pedágio | Detecta os km em rodovia pedagiada em cada trecho e estima o valor pela tarifa média por km, com multiplicador por categoria de veículo (moto a caminhão 4 eixos). Se você souber o valor real, ele substitui a estimativa. Opção **evitar pedágios** recalcula a rota fora delas. Avisa quando há balsa. |
 | Levar para a estrada | Google Maps (rotas com mais de 9 paradas viram links encadeados), Waze por parada, WhatsApp, link compartilhável e impressão. |
 | Memória | O planejamento fica salvo no navegador. O link compartilhado carrega a rota completa em outro aparelho. |
 
 ## Stack
 
 - React 18, TypeScript, Vite, Tailwind CSS
-- Leaflet com mapa CARTO/OpenStreetMap
+- Leaflet com tiles do OpenStreetMap (sem chave; reserva automática no OSM France)
 - [OSRM](https://project-osrm.org/) para rotas e matriz de tempos/distâncias
 - [Photon](https://photon.komoot.io/) para busca e geocodificação reversa
 - Sem backend, sem chave de API, sem custo
@@ -42,7 +45,8 @@ O workflow `.github/workflows/deploy.yml` testa, compila e publica no GitHub Pag
 
 - **Sem trânsito em tempo real.** Os tempos vêm do OSRM, com velocidades típicas das vias.
 - **Servidores públicos.** O OSRM de demonstração e o Photon têm uso justo e podem ficar instáveis. Para uso diário de uma equipe, hospede os dois (ambos têm imagem Docker) ou troque por um provedor pago.
-- **Sem pedágio e combustível** nesta versão.
+- **Pedágio é estimativa.** Os mapas abertos marcam quais vias são pedagiadas, mas não o preço de cada praça. O valor sai de uma tarifa média por km (R$ 0,16 para carro, editável). Para valores exatos, informe o total real.
+- **Preços de combustível são referências** e ficam desatualizados: edite com o valor do seu posto (fica salvo no navegador).
 
 ## Privacidade (LGPD)
 
@@ -50,7 +54,7 @@ Os endereços ficam só no navegador (localStorage) e são enviados apenas aos s
 
 ## Próximos passos sugeridos
 
-1. Custo da viagem: consumo, preço do combustível e pedágios.
+1. Praças de pedágio com tarifa oficial (ANTT, ARTESP) para trocar a estimativa por valor exato.
 2. Horário de saída, tempo em cada parada e previsão de chegada.
 3. Importar lista de endereços (colar ou CSV).
 4. Rotas salvas com login (Supabase) e histórico.

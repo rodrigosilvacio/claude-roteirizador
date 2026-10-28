@@ -38,6 +38,8 @@ body {
 .rota-pin--dest { background: #e8a63c; color: #1b3644; }
 
 .leaflet-container { font-family: inherit; background: #ece8e1; }
+/* suaviza as cores do OpenStreetMap para combinar com a paleta do app */
+.rota-tiles { filter: saturate(0.7) contrast(0.95) brightness(1.02); }
 .leaflet-popup-content-wrapper { border-radius: 16px; }
 .leaflet-popup-content { margin: 12px 14px; }
 

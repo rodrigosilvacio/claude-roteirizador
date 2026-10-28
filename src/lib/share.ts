@@ -29,9 +29,10 @@ export function wazeLink(p: Place): string {
   return `https://waze.com/ul?ll=${ll(p)}&navigate=yes`
 }
 
-export function whatsappText(result: RouteResult): string {
+export function whatsappText(result: RouteResult, costLine?: string): string {
   const lines = [
     `*Roteiro* · ${formatDistance(result.distance)} · ${formatDuration(result.duration)}`,
+    ...(costLine ? [costLine] : []),
     '',
     ...result.sequence.map((p, i) => `${result.tags[i]}. ${p.label}`),
     '',
@@ -40,8 +41,8 @@ export function whatsappText(result: RouteResult): string {
   return lines.join('\n')
 }
 
-export function whatsappLink(result: RouteResult): string {
-  return `https://wa.me/?text=${encodeURIComponent(whatsappText(result))}`
+export function whatsappLink(result: RouteResult, costLine?: string): string {
+  return `https://wa.me/?text=${encodeURIComponent(whatsappText(result, costLine))}`
 }
 
 // --- estado compartilhável no hash da URL ---
@@ -52,13 +53,22 @@ export interface SharedPlan {
   d: [string, number, number] | null
   e: string
   c: string
+  /** 1 quando a rota evita pedágios */
+  t?: 1
 }
 
 const pack = (p: Place | null): [string, number, number] | null => (p ? [p.label, +p.lat.toFixed(6), +p.lon.toFixed(6)] : null)
 export const unpack = (t: [string, number, number] | null): Place | null => (t ? { label: t[0], lat: t[1], lon: t[2] } : null)
 
-export function encodePlan(origin: Place | null, stops: (Place | null)[], dest: Place | null, endMode: string, criterion: string): string {
-  const plan: SharedPlan = { o: pack(origin), s: stops.map(pack), d: pack(dest), e: endMode, c: criterion }
+export function encodePlan(
+  origin: Place | null,
+  stops: (Place | null)[],
+  dest: Place | null,
+  endMode: string,
+  criterion: string,
+  avoidTolls = false,
+): string {
+  const plan: SharedPlan = { o: pack(origin), s: stops.map(pack), d: pack(dest), e: endMode, c: criterion, ...(avoidTolls ? { t: 1 as const } : {}) }
   const bytes = new TextEncoder().encode(JSON.stringify(plan))
   let bin = ''
   bytes.forEach((b) => (bin += String.fromCharCode(b)))

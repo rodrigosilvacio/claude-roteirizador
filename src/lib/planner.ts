@@ -10,6 +10,7 @@ export interface PlanInput {
   destination: Waypoint
   endMode: EndMode
   criterion: Criterion
+  avoidTolls?: boolean
 }
 
 /** Campos que entram no cálculo: paradas vazias são ignoradas */
@@ -44,7 +45,7 @@ export async function computePlan(input: PlanInput, optimize: boolean): Promise<
   let path = typedPath
   let comparison: RouteResult['comparison']
   if (optimize && stops.length >= 2) {
-    const matrix = await fetchMatrix(places)
+    const matrix = await fetchMatrix(places, !!input.avoidTolls)
     const cost = input.criterion === 'duration' ? matrix.durations : matrix.distances
     const order = optimizeOrder(cost, input.endMode)
     path = closePath(order, input.endMode, nodes.length)
@@ -65,7 +66,7 @@ export async function computePlan(input: PlanInput, optimize: boolean): Promise<
     return String(++visit)
   })
   const sequence = path.map((i) => places[i])
-  const route = await fetchRoute(sequence, tags)
+  const route = await fetchRoute(sequence, tags, !!input.avoidTolls)
 
   return {
     sequence,
@@ -76,6 +77,8 @@ export async function computePlan(input: PlanInput, optimize: boolean): Promise<
     legs: route.legs,
     distance: route.distance,
     duration: route.duration,
+    tollDistance: route.tollDistance,
+    avoidTolls: !!input.avoidTolls,
     optimized: optimize && stops.length >= 2,
     criterion: input.criterion,
     comparison,

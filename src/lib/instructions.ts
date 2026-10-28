@@ -7,6 +7,8 @@ export interface OsrmStep {
   exits?: string
   distance: number
   duration: number
+  /** Classes da via após cada cruzamento (toll, ferry, motorway...) */
+  intersections?: { classes?: string[] }[]
   maneuver: {
     type: string
     modifier?: string
