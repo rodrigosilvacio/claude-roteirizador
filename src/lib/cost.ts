@@ -39,6 +39,8 @@ export interface CostSettings {
   vehicle: VehicleClass
   tollRate: number
   people: number
+  /** true depois que a pessoa informa o consumo ou o preço do próprio carro */
+  custom?: boolean
 }
 
 export const DEFAULT_COST: CostSettings = {
@@ -48,6 +50,35 @@ export const DEFAULT_COST: CostSettings = {
   vehicle: 'carro',
   tollRate: DEFAULT_TOLL_RATE,
   people: 1,
+  custom: false,
+}
+
+/** Faixas plausíveis: fora delas o valor quase sempre é erro de digitação */
+export const CONSUMPTION_RANGE = [2, 60] as const
+export const PRICE_RANGE = [1, 20] as const
+
+/** Aviso sobre consumo ou preço que deixariam o custo errado */
+export function fuelWarning(s: CostSettings): string | null {
+  const unit = FUEL_PRESETS[s.fuel].unit
+  const unitName = unit === 'l' ? 'litro' : 'm³'
+  if (s.consumption <= 0) return `Informe quantos km o carro faz por ${unitName}.`
+  if (s.price <= 0) return `Informe o preço do ${unitName}.`
+  if (s.consumption < CONSUMPTION_RANGE[0] || s.consumption > CONSUMPTION_RANGE[1])
+    return `Confira o consumo: ${s.consumption.toLocaleString('pt-BR')} km/${unit} é incomum para um carro.`
+  if (s.price < PRICE_RANGE[0] || s.price > PRICE_RANGE[1]) return `Confira o preço: ${formatMoney(s.price)} por ${unitName} é incomum.`
+  return null
+}
+
+/** Quanto custa cada km rodado só de combustível */
+export function fuelCostPerKm(s: CostSettings): number {
+  return s.consumption > 0 ? Math.max(0, s.price) / s.consumption : 0
+}
+
+/** Configurações salvas antes deste campo existir: considera "seus valores" se diferem da referência */
+export function inferCustom(s: CostSettings): boolean {
+  if (s.custom !== undefined) return s.custom
+  const ref = FUEL_PRESETS[s.fuel]
+  return s.consumption !== ref.consumption || s.price !== ref.price
 }
 
 export interface CostBreakdown {

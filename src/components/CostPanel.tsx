@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
+import { NumberField } from './NumberField'
 import { Fuel, Minus, Plus, Settings2, Ship, Ticket } from 'lucide-react'
 import type { RouteResult } from '../types'
-import { FUEL_PRESETS, VEHICLES, computeCost, formatMoney, parseNumber, type CostSettings, type FuelType, type VehicleClass } from '../lib/cost'
+import { FUEL_PRESETS, VEHICLES, computeCost, formatMoney, type CostSettings, type FuelType, type VehicleClass } from '../lib/cost'
 import { formatDistance } from '../lib/format'
 
 interface Props {
@@ -47,6 +48,7 @@ export function CostPanel({ result, settings, manualToll, onSettings, onManualTo
       <dl className="mt-3 divide-y divide-paper-line rounded-2xl bg-white/70">
         <Row icon={<Fuel className="h-4 w-4" />} label="Combustível" value={formatMoney(cost.fuelCost)}>
           {liters.format(cost.fuelAmount)} {fuel.unit} de {fuel.label.toLowerCase()} · {liters.format(settings.consumption)} km/{fuel.unit} · {formatMoney(settings.price)}/{fuel.unit}
+          {!settings.custom && <span className="text-[#9a6a1c]"> · valores de referência</span>}
         </Row>
         <Row icon={<Ticket className="h-4 w-4" />} label="Pedágio" value={formatMoney(cost.tollCost)}>
           {cost.tollIsManual
@@ -80,7 +82,7 @@ export function CostPanel({ result, settings, manualToll, onSettings, onManualTo
                   key={f}
                   role="radio"
                   aria-checked={settings.fuel === f}
-                  onClick={() => set({ fuel: f, consumption: FUEL_PRESETS[f].consumption, price: FUEL_PRESETS[f].price })}
+                  onClick={() => set({ fuel: f, consumption: FUEL_PRESETS[f].consumption, price: FUEL_PRESETS[f].price, custom: false })}
                   className={`rounded-xl px-1 py-1.5 text-sm font-medium ${settings.fuel === f ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`}
                 >
                   {FUEL_PRESETS[f].label}
@@ -89,8 +91,8 @@ export function CostPanel({ result, settings, manualToll, onSettings, onManualTo
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <NumberField label={`Consumo (km/${fuel.unit})`} value={settings.consumption} onChange={(v) => set({ consumption: v ?? 0 })} />
-            <NumberField label={`Preço (R$/${fuel.unit})`} value={settings.price} onChange={(v) => set({ price: v ?? 0 })} />
+            <NumberField label={`Consumo (km/${fuel.unit})`} value={settings.consumption} onChange={(v) => set({ consumption: v ?? 0, custom: true })} />
+            <NumberField label={`Preço (R$/${fuel.unit})`} value={settings.price} onChange={(v) => set({ price: v ?? 0, custom: true })} />
           </div>
           <label className="grid gap-1">
             <span className="text-sm text-ink-soft">Veículo (categoria do pedágio)</span>
@@ -147,46 +149,5 @@ function Row({ icon, label, value, children }: { icon: React.ReactNode; label: s
       </div>
       <span className="shrink-0 font-mono font-semibold text-ink-deep">{value}</span>
     </div>
-  )
-}
-
-const fmt = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 })
-
-function NumberField({
-  label,
-  value,
-  onChange,
-  placeholder,
-  allowEmpty,
-}: {
-  label: string
-  value: number | null
-  onChange: (v: number | null) => void
-  placeholder?: string
-  allowEmpty?: boolean
-}) {
-  // texto local para permitir digitar "6," sem o campo pular
-  const [text, setText] = useState(value === null ? '' : fmt.format(value))
-  useEffect(() => {
-    const parsed = parseNumber(text)
-    if (parsed !== value) setText(value === null ? '' : fmt.format(value))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value])
-  return (
-    <label className="grid gap-1">
-      <span className="text-sm text-ink-soft">{label}</span>
-      <input
-        inputMode="decimal"
-        value={text}
-        placeholder={placeholder}
-        onChange={(e) => {
-          setText(e.target.value)
-          const n = parseNumber(e.target.value)
-          if (n !== null && n >= 0) onChange(n)
-          else if (!e.target.value.trim() && allowEmpty) onChange(null)
-        }}
-        className="min-w-0 rounded-xl border border-paper-line bg-white px-3 py-2 font-mono text-ink-deep placeholder:font-sans placeholder:text-xs placeholder:text-ink-soft/70 focus:border-ink focus:outline-none"
-      />
-    </label>
   )
 }

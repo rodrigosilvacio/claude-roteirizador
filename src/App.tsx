@@ -8,7 +8,8 @@ import { AddressInput, Badge } from './components/AddressInput'
 import { MapView, type MapPoint } from './components/MapView'
 import { Comparison, DriverSteps, ExportPanel, Itinerary, Summary } from './components/Results'
 import { CostPanel } from './components/CostPanel'
-import { DEFAULT_COST, FUEL_PRESETS, VEHICLES, computeCost, formatMoney, type CostSettings } from './lib/cost'
+import { VehicleCard } from './components/VehicleCard'
+import { DEFAULT_COST, FUEL_PRESETS, VEHICLES, computeCost, formatMoney, inferCustom, type CostSettings } from './lib/cost'
 import { MAX_STOPS, computePlan, validate } from './lib/planner'
 import { reversePlace } from './lib/geocode'
 import { EXAMPLES, type Example } from './lib/examples'
@@ -20,7 +21,10 @@ const COST_KEY = 'rota:custos:v1'
 function loadCost(): CostSettings {
   try {
     const s = JSON.parse(localStorage.getItem(COST_KEY) ?? 'null') as Partial<CostSettings> | null
-    if (s && s.fuel && s.fuel in FUEL_PRESETS && s.vehicle && s.vehicle in VEHICLES) return { ...DEFAULT_COST, ...s }
+    if (s && s.fuel && s.fuel in FUEL_PRESETS && s.vehicle && s.vehicle in VEHICLES) {
+      const merged = { ...DEFAULT_COST, ...s, custom: undefined }
+      return { ...merged, custom: inferCustom({ ...merged, custom: s.custom }) }
+    }
   } catch {
     /* usa os valores de referência */
   }
@@ -390,6 +394,8 @@ export default function App() {
                 Evitar pedágios
               </label>
             </div>
+
+            <VehicleCard settings={costSettings} onChange={setCostSettings} />
 
             {error && (
               <div role="alert" className="mt-4 flex items-start gap-2 rounded-2xl border border-alert/30 bg-alert/5 px-4 py-3 text-sm text-alert">
