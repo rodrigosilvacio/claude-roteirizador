@@ -1,0 +1,46 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  background: #f4f2ee;
+  font-family: 'Schibsted Grotesk', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .export-btn {
+    @apply flex items-center justify-center gap-1.5 rounded-2xl border border-paper-line bg-white px-2 py-2.5 text-sm font-medium text-ink hover:border-ink;
+  }
+  .map-menu-btn {
+    @apply rounded-lg px-3 py-1.5 text-left text-sm font-medium text-ink hover:bg-paper disabled:opacity-40;
+  }
+}
+
+/* pinos do mapa em formato de gota */
+.rota-pin {
+  width: 36px;
+  height: 36px;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(27, 54, 68, 0.3);
+  border: 2px solid #fff;
+}
+.rota-pin span {
+  transform: rotate(45deg);
+  font: 600 14px 'JetBrains Mono', monospace;
+}
+.rota-pin--origin { background: #26495c; color: #fff; }
+.rota-pin--stop { background: #fff; color: #26495c; border-color: #26495c; }
+.rota-pin--dest { background: #e8a63c; color: #1b3644; }
+
+.leaflet-container { font-family: inherit; background: #ece8e1; }
+.leaflet-popup-content-wrapper { border-radius: 16px; }
+.leaflet-popup-content { margin: 12px 14px; }
+
+@media print {
+  body { background: #fff; }
+}
