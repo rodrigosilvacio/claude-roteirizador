@@ -15,7 +15,7 @@ Planeje uma rota com até 25 paradas, veja no mapa e deixe o sistema encontrar a
 | Trajeto do motorista | Instruções curva a curva em português, por trecho, com código da rodovia e sentido. Clique numa instrução para vê-la no mapa. |
 | Seu carro | Bloco sempre visível no formulário para informar quantos km o carro faz por litro e o preço do litro no seu posto, antes mesmo de calcular. Mostra o custo por km rodado, sinaliza quando ainda são valores de referência e avisa sobre números improváveis (ex.: 145 km/l). |
 | Custo da viagem | Combustível (gasolina, etanol, diesel ou GNV, com consumo e preço editáveis) mais pedágio, com custo por km e divisão entre pessoas. Entra no resumo, na comparação de ordens e no texto do WhatsApp. |
-| Pedágio | Detecta os km em rodovia pedagiada em cada trecho e estima o valor pela tarifa média por km, com multiplicador por categoria de veículo (moto a caminhão 4 eixos). Se você souber o valor real, ele substitui a estimativa. Opção **evitar pedágios** recalcula a rota fora delas. Avisa quando há balsa. |
+| Pedágio | Encontra as **praças de pedágio** no trajeto (OpenStreetMap via Overpass), mostra cada uma no mapa e na lista, com o trecho em que fica. O valor de cada praça é a tarifa média (R$ 10, editável) × categoria do veículo, ou o valor real que você digitar, que fica salvo para as próximas rotas. Se a consulta falhar, usa a estimativa por km em rodovia pedagiada. Opção **evitar pedágios** recalcula a rota fora delas. Avisa quando há balsa. |
 | Levar para a estrada | Google Maps (rotas com mais de 9 paradas viram links encadeados), Waze por parada, WhatsApp, link compartilhável e impressão. |
 | Memória | O planejamento fica salvo no navegador. O link compartilhado carrega a rota completa em outro aparelho. |
 
@@ -25,6 +25,7 @@ Planeje uma rota com até 25 paradas, veja no mapa e deixe o sistema encontrar a
 - Leaflet com tiles do OpenStreetMap (sem chave; reserva automática no OSM France)
 - [OSRM](https://project-osrm.org/) para rotas e matriz de tempos/distâncias
 - [Photon](https://photon.komoot.io/) para busca e geocodificação reversa
+- [Overpass](https://overpass-api.de/) para encontrar as praças de pedágio no OpenStreetMap
 - Sem backend, sem chave de API, sem custo
 
 ## Rodando
@@ -46,7 +47,7 @@ O workflow `.github/workflows/deploy.yml` testa, compila e publica no GitHub Pag
 
 - **Sem trânsito em tempo real.** Os tempos vêm do OSRM, com velocidades típicas das vias.
 - **Servidores públicos.** O OSRM de demonstração e o Photon têm uso justo e podem ficar instáveis. Para uso diário de uma equipe, hospede os dois (ambos têm imagem Docker) ou troque por um provedor pago.
-- **Pedágio é estimativa.** Os mapas abertos marcam quais vias são pedagiadas, mas não o preço de cada praça. O valor sai de uma tarifa média por km (R$ 0,16 para carro, editável). Para valores exatos, informe o total real.
+- **Valor do pedágio.** As praças vêm do OpenStreetMap, mas o preço de cada uma não. Sem o valor real informado, vale a tarifa média por praça. Praças que não estiverem mapeadas não aparecem: confira o trajeto no site da concessionária.
 - **Preços de combustível são referências** e ficam desatualizados: edite com o valor do seu posto (fica salvo no navegador).
 
 ## Privacidade (LGPD)

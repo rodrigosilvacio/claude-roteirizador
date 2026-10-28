@@ -3,6 +3,7 @@ import L from 'leaflet'
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
 import type { EndMode, RouteResult } from '../types'
+import type { TollPlaza } from '../lib/tolls'
 
 export interface MapPoint {
   id: string
@@ -33,6 +34,8 @@ interface Props {
   /** Muda quando o mapa volta a ficar visível (celular), para recalcular o tamanho */
   visibleKey?: string
   points: MapPoint[]
+  /** Praças de pedágio detectadas na rota */
+  plazas?: TollPlaza[]
   result: RouteResult | null
   stale: boolean
   highlightLeg: number | null
@@ -141,7 +144,9 @@ function ClickMenu({ endMode, canAddStop, onPick }: Pick<Props, 'endMode' | 'can
   )
 }
 
-export function MapView({ visibleKey, points, result, stale, highlightLeg, focus, endMode, canAddStop, onPick, onMove }: Props) {
+const tollIcon = L.divIcon({ className: '', html: '<div class="rota-toll" aria-hidden="true">$</div>', iconSize: [20, 20], iconAnchor: [10, 10], popupAnchor: [0, -10] })
+
+export function MapView({ visibleKey, points, plazas = [], result, stale, highlightLeg, focus, endMode, canAddStop, onPick, onMove }: Props) {
   const legs = result?.legs ?? []
   const handlers = useMemo(
     () =>
@@ -179,6 +184,16 @@ export function MapView({ visibleKey, points, result, stale, highlightLeg, focus
             </span>
           )
         })}
+      {plazas.map((p, i) => (
+        <Marker key={`toll-${p.key}-${i}`} position={[p.lat, p.lon]} icon={tollIcon} zIndexOffset={-100}>
+          <Popup>
+            <div className="font-sans">
+              <div className="font-mono text-[11px] uppercase tracking-widest text-ink-soft">pedágio {i + 1}</div>
+              <div className="mt-0.5 text-sm text-ink-deep">{p.name}</div>
+            </div>
+          </Popup>
+        </Marker>
+      ))}
       {points.map((p) => (
         <Marker key={p.id} position={[p.lat, p.lon]} icon={pinIcon(p.tag, p.variant)} draggable eventHandlers={handlers[p.id]}>
           <Popup>
