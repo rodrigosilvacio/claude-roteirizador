@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import L from 'leaflet'
 import { MapContainer, Marker, Polyline, Popup, TileLayer, useMap, useMapEvents } from 'react-leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -13,7 +13,25 @@ export interface MapPoint {
   label: string
 }
 
+// Tiles sem chave de API. A CARTO passou a exigir chave e devolvia o aviso "API KEY REQUIRED" no lugar do mapa.
+const TILE_PROVIDERS = [
+  {
+    url: (import.meta.env.VITE_TILE_URL as string | undefined) ?? 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    subdomains: 'abc',
+  },
+  {
+    url: 'https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png',
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> · OSM France',
+    subdomains: 'abc',
+  },
+]
+/** Falhas de tile antes de trocar para o provedor reserva */
+const TILE_ERROR_LIMIT = 6
+
 interface Props {
+  /** Muda quando o mapa volta a ficar visível (celular), para recalcular o tamanho */
+  visibleKey?: string
   points: MapPoint[]
   result: RouteResult | null
   stale: boolean
@@ -43,19 +61,48 @@ function pinIcon(tag: string, variant: MapPoint['variant']) {
   return icons.get(key)!
 }
 
-function FitBounds({ points, result }: { points: MapPoint[]; result: RouteResult | null }) {
+function FitBounds({ points, result, visibleKey }: { points: MapPoint[]; result: RouteResult | null; visibleKey?: string }) {
   const map = useMap()
   const signature = result ? `r-${result.distance}` : points.map((p) => `${p.lat},${p.lon}`).join('|')
   useEffect(() => {
     const coords: [number, number][] = result ? result.legs.flatMap((l) => l.geometry) : points.map((p) => [p.lat, p.lon])
+    // o contêiner pode ter estado oculto (display: none) e o Leaflet precisa medir de novo
+    map.invalidateSize()
     if (!coords.length) return
     // sem animação: o Leaflet descarta um enquadramento pedido durante outro zoom animado
     map.stop()
     if (coords.length === 1) map.setView(coords[0], 13, { animate: false })
     else map.fitBounds(L.latLngBounds(coords), { padding: [48, 48], maxZoom: 15, animate: false })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature])
+  }, [signature, visibleKey])
   return null
+}
+
+function Tiles() {
+  const [provider, setProvider] = useState(0)
+  const errors = useRef(0)
+  const p = TILE_PROVIDERS[provider]
+  return (
+    <TileLayer
+      key={p.url}
+      url={p.url}
+      attribution={p.attribution}
+      subdomains={p.subdomains}
+      maxZoom={19}
+      className="rota-tiles"
+      eventHandlers={{
+        tileerror: () => {
+          if (++errors.current >= TILE_ERROR_LIMIT && provider < TILE_PROVIDERS.length - 1) {
+            errors.current = 0
+            setProvider(provider + 1)
+          }
+        },
+        tileload: () => {
+          errors.current = 0
+        },
+      }}
+    />
+  )
 }
 
 function FocusOn({ focus }: { focus: [number, number] | null }) {
@@ -94,7 +141,7 @@ function ClickMenu({ endMode, canAddStop, onPick }: Pick<Props, 'endMode' | 'can
   )
 }
 
-export function MapView({ points, result, stale, highlightLeg, focus, endMode, canAddStop, onPick, onMove }: Props) {
+export function MapView({ visibleKey, points, result, stale, highlightLeg, focus, endMode, canAddStop, onPick, onMove }: Props) {
   const legs = result?.legs ?? []
   const handlers = useMemo(
     () =>
@@ -114,11 +161,8 @@ export function MapView({ points, result, stale, highlightLeg, focus, endMode, c
 
   return (
     <MapContainer center={[-23.55, -46.63]} zoom={11} className="h-full w-full" zoomControl={true}>
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>'
-        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-      />
-      <FitBounds points={points} result={stale ? null : result} />
+      <Tiles />
+      <FitBounds points={points} result={stale ? null : result} visibleKey={visibleKey} />
       <FocusOn focus={focus} />
       <ClickMenu endMode={endMode} canAddStop={canAddStop} onPick={onPick} />
       {!stale &&

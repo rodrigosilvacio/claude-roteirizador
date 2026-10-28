@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { DndContext, KeyboardSensor, PointerSensor, closestCenter, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core'
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { ArrowDown, ArrowUp, ArrowUpDown, Building2, Crosshair, GripVertical, Info, Loader2, Navigation, Plus, RotateCcw, Route, Sparkles, Trash2, Waves, AlertTriangle } from 'lucide-react'
+import { ArrowDown, ArrowUp, ArrowUpDown, Building2, Crosshair, GripVertical, Info, List, Loader2, Map as MapIcon, Navigation, Plus, RotateCcw, Route, Sparkles, Trash2, Waves, AlertTriangle } from 'lucide-react'
 import type { Criterion, EndMode, Place, RouteResult, Waypoint } from './types'
 import { AddressInput, Badge } from './components/AddressInput'
 import { MapView, type MapPoint } from './components/MapView'
@@ -88,6 +88,8 @@ export default function App() {
   const [highlightLeg, setHighlightLeg] = useState<number | null>(null)
   const [focus, setFocus] = useState<[number, number] | null>(null)
   const [locating, setLocating] = useState(false)
+  // só no celular: alterna entre a lista e o mapa em tela cheia
+  const [mobileView, setMobileView] = useState<'list' | 'map'>('list')
   const [costSettings, setCostSettings] = useState<CostSettings>(loadCost)
   // valor real informado vale só para a rota calculada
   const [manualToll, setManualToll] = useState<number | null>(null)
@@ -140,7 +142,7 @@ export default function App() {
       setManualToll(null)
       setResultSig(signature(plan, r.optimized))
       setHighlightLeg(null)
-      if (window.innerWidth < 1024) setTimeout(() => document.getElementById('resultado')?.scrollIntoView({ behavior: 'smooth' }), 50)
+      setTimeout(() => document.getElementById('resultado')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50)
     } catch (e) {
       setError((e as Error).message)
     } finally {
@@ -262,21 +264,24 @@ export default function App() {
   const filledStops = stops.filter((s) => s.place).length
 
   return (
-    <div className="min-h-screen bg-paper text-ink-deep">
-      <div className="mx-auto grid max-w-[1560px] grid-cols-1 lg:grid-cols-[minmax(460px,560px)_1fr] lg:grid-rows-[auto_1fr]">
-        {/* ---------- formulário ---------- */}
-        <div className="px-4 pt-6 sm:px-6 lg:col-start-1 lg:row-start-1 print:hidden">
-          <header className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <div className="font-mono text-xs uppercase tracking-[0.3em] text-ink-soft">planejador de trajetos</div>
-              <h1 className="mt-1 text-6xl font-extrabold tracking-tighter text-ink">
+    <div className="bg-paper text-ink-deep md:flex md:h-screen md:overflow-hidden print:block print:h-auto">
+      {/* ---------- painel lateral: formulário e resultado, com rolagem própria ---------- */}
+      <div
+        id="painel"
+        className="md:w-[400px] md:shrink-0 md:overflow-y-auto md:border-r md:border-paper-line lg:w-[440px] xl:w-[480px] print:w-auto print:overflow-visible print:border-0"
+      >
+        <div className="px-4 pt-4 print:hidden">
+          <header className="flex items-center justify-between gap-3">
+            <div className="flex items-baseline gap-3">
+              <h1 className="text-3xl font-extrabold tracking-tighter text-ink">
                 Rota<span className="text-sun">.</span>
               </h1>
+              <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-ink-soft">planejador de trajetos</span>
             </div>
-            <p className="max-w-[230px] text-right text-ink-soft">Até {MAX_STOPS} paradas. Uma ordem que faz sentido.</p>
+            <span className="hidden font-mono text-[11px] text-ink-soft sm:inline">até {MAX_STOPS} paradas</span>
           </header>
 
-          <section className="mt-6 rounded-[28px] border border-paper-line bg-paper-card p-4 shadow-sm sm:p-6">
+          <section className="mt-3 rounded-3xl border border-paper-line bg-paper-card p-4 shadow-sm">
             <Segmented
               label="Como a rota termina"
               value={endMode}
@@ -289,7 +294,7 @@ export default function App() {
             />
             {endMode === 'free' && <p className="mt-2 text-sm text-ink-soft">O sistema escolhe qual parada deve ser a última para economizar mais.</p>}
 
-            <FieldLabel className="mt-6" title="Partida" waypoint={origin} />
+            <FieldLabel className="mt-4" title="Partida" waypoint={origin} />
             <AddressInput
               query={origin.query}
               place={origin.place}
@@ -299,25 +304,25 @@ export default function App() {
               onPlace={(p) => patchWaypoint(origin.id, { place: p, query: p.label })}
               onClear={() => patchWaypoint(origin.id, { place: null, query: '' })}
             />
-            <div className="mt-2 flex items-center justify-between pl-12">
-              <button onClick={useMyLocation} className="inline-flex items-center gap-2 font-mono text-sm text-ink hover:underline" disabled={locating}>
+            <div className="mt-1.5 flex items-center justify-between pl-10">
+              <button onClick={useMyLocation} className="inline-flex items-center gap-1.5 font-mono text-xs text-ink hover:underline" disabled={locating}>
                 {locating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Crosshair className="h-4 w-4" />} usar minha localização
               </button>
               {endMode === 'fixed' && (
                 <button
                   onClick={() => update((s) => ({ ...s, origin: s.destination, destination: s.origin }))}
-                  className="rounded-full border border-paper-line p-2.5 text-ink hover:bg-paper"
+                  className="rounded-full border border-paper-line p-1.5 text-ink hover:bg-paper"
                   aria-label="Inverter partida e destino"
                   title="Inverter partida e destino"
                 >
-                  <ArrowUpDown className="h-5 w-5" />
+                  <ArrowUpDown className="h-4 w-4" />
                 </button>
               )}
             </div>
 
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
               <SortableContext items={stops.map((s) => s.id)} strategy={verticalListSortingStrategy}>
-                <div className="mt-3 space-y-3 border-l-2 border-dashed border-sun-line pl-3">
+                <div className="mt-2 space-y-2 border-l-2 border-dashed border-sun-line pl-2">
                   {stops.map((w, i) => (
                     <StopRow
                       key={w.id}
@@ -338,20 +343,20 @@ export default function App() {
             <button
               onClick={() => update((s) => ({ ...s, stops: [...s.stops, wp()] }))}
               disabled={stops.length >= MAX_STOPS}
-              className="mt-3 flex w-full items-center justify-between rounded-2xl border border-dashed border-paper-line px-4 py-3 text-ink hover:border-ink disabled:opacity-50"
+              className="mt-2 flex w-full items-center justify-between rounded-xl border border-dashed border-paper-line px-3 py-2 text-ink hover:border-ink disabled:opacity-50"
             >
-              <span className="flex items-center gap-2 text-[17px]">
-                <Plus className="h-5 w-5" /> Adicionar parada
+              <span className="flex items-center gap-2 text-[15px]">
+                <Plus className="h-4 w-4" /> Adicionar parada
               </span>
-              <span className="font-mono text-sm text-ink-soft">
+              <span className="font-mono text-xs text-ink-soft">
                 {stops.length}/{MAX_STOPS}
               </span>
             </button>
-            <p className="mt-2 text-xs text-ink-soft">Dica: clique no mapa para adicionar um ponto, e arraste os pinos para ajustar.</p>
+            <p className="mt-1.5 text-[11px] text-ink-soft">Dica: clique no mapa para adicionar um ponto, e arraste os pinos para ajustar.</p>
 
             {endMode === 'fixed' && (
               <>
-                <FieldLabel className="mt-5" title="Destino" waypoint={destination} />
+                <FieldLabel className="mt-3" title="Destino" waypoint={destination} />
                 <AddressInput
                   query={destination.query}
                   place={destination.place}
@@ -365,7 +370,7 @@ export default function App() {
               </>
             )}
 
-            <div className="mt-6">
+            <div className="mt-4">
               <Segmented
                 label="Otimizar pelo"
                 value={criterion}
@@ -375,12 +380,12 @@ export default function App() {
                   { value: 'distance', label: 'Menor distância' },
                 ]}
               />
-              <label className="mt-3 flex cursor-pointer items-center gap-3 text-[15px] text-ink-deep">
+              <label className="mt-2.5 flex cursor-pointer items-center gap-2.5 text-sm text-ink-deep">
                 <input
                   type="checkbox"
                   checked={avoidTolls}
                   onChange={(e) => update((s) => ({ ...s, avoidTolls: e.target.checked }))}
-                  className="h-5 w-5 rounded border-paper-line accent-[#26495c]"
+                  className="h-4 w-4 rounded border-paper-line accent-[#26495c]"
                 />
                 Evitar pedágios
               </label>
@@ -392,76 +397,54 @@ export default function App() {
               </div>
             )}
 
-            <div className="mt-5 grid gap-3">
+            <div className="mt-4 grid gap-2">
               <button
                 onClick={() => run(true)}
                 disabled={!!busy}
-                className="flex items-center justify-center gap-2.5 rounded-2xl bg-sun px-4 py-4 text-lg font-bold text-ink-deep shadow-sm transition hover:brightness-95 disabled:opacity-60"
+                className="flex items-center justify-center gap-2 rounded-xl bg-sun px-4 py-3 text-base font-bold text-ink-deep shadow-sm transition hover:brightness-95 disabled:opacity-60"
               >
                 {busy === 'optimized' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
                 Otimizar por {criterionLabel}
               </button>
-              <div className="flex gap-3">
+              <div className="flex gap-2">
                 <button
                   onClick={() => run(false)}
                   disabled={!!busy}
-                  className="flex flex-1 items-center justify-center gap-2.5 rounded-2xl bg-ink px-4 py-3.5 font-semibold text-white transition hover:bg-ink-deep disabled:opacity-60"
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-ink-deep disabled:opacity-60"
                 >
                   {busy === 'typed' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Navigation className="h-5 w-5" />}
                   Na ordem digitada
                 </button>
-                <button onClick={reset} className="rounded-2xl border border-paper-line px-4 text-ink hover:bg-paper" aria-label="Limpar tudo" title="Limpar tudo">
-                  <RotateCcw className="h-5 w-5" />
+                <button onClick={reset} className="rounded-xl border border-paper-line px-3 text-ink hover:bg-paper" aria-label="Limpar tudo" title="Limpar tudo">
+                  <RotateCcw className="h-4 w-4" />
                 </button>
               </div>
             </div>
-            {filledStops >= 2 && !busy && <p className="mt-2 text-center text-xs text-ink-soft">A otimização testa as combinações de {filledStops} paradas e escolhe a melhor.</p>}
+            {filledStops >= 2 && !busy && <p className="mt-1.5 text-center text-[11px] text-ink-soft">A otimização testa as combinações de {filledStops} paradas e escolhe a melhor.</p>}
           </section>
 
-          <div className="mt-4 grid gap-2">
-            <div className="font-mono text-xs uppercase tracking-[0.2em] text-ink-soft">ou comece por um exemplo</div>
+          <div className="mt-3 grid gap-1.5">
+            <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft">ou comece por um exemplo</div>
             {EXAMPLES.map((ex) => (
               <button
                 key={ex.title}
                 onClick={() => loadExample(ex)}
-                className="flex items-center gap-3 rounded-2xl border border-dashed border-paper-line px-4 py-3 text-left hover:border-ink hover:bg-paper-card"
+                className="flex items-center gap-3 rounded-xl border border-dashed border-paper-line px-3 py-2 text-left hover:border-ink hover:bg-paper-card"
               >
                 {ex.icon === 'city' ? <Building2 className="h-5 w-5 shrink-0 text-sun" /> : ex.icon === 'coast' ? <Waves className="h-5 w-5 shrink-0 text-sun" /> : <Route className="h-5 w-5 shrink-0 text-sun" />}
                 <span>
-                  <span className="block text-[15px] leading-snug text-ink-deep">{ex.title}</span>
-                  <span className="block font-mono text-[11px] text-ink-soft">{ex.subtitle.replace('Exemplo · ', '')}</span>
+                  <span className="block text-sm leading-snug text-ink-deep">{ex.title}</span>
+                  <span className="block font-mono text-[10px] text-ink-soft">{ex.subtitle.replace('Exemplo · ', '')}</span>
                 </span>
               </button>
             ))}
           </div>
         </div>
 
-        {/* ---------- mapa ---------- */}
-        <aside className="px-4 pt-5 sm:px-6 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:pl-0 lg:pt-0 print:hidden">
-          <div className="relative h-[60vh] overflow-hidden rounded-[28px] border border-paper-line lg:sticky lg:top-0 lg:h-[calc(100vh-2rem)] lg:mt-4">
-            <MapView
-              points={mapPoints}
-              result={result}
-              stale={stale}
-              highlightLeg={highlightLeg}
-              focus={focus}
-              endMode={endMode}
-              canAddStop={stops.length < MAX_STOPS || stops.some((w) => !w.place && !w.query.trim())}
-              onPick={onPick}
-              onMove={onMove}
-            />
-            {stale && (
-              <div className="absolute left-1/2 top-4 z-[500] -translate-x-1/2 rounded-full bg-ink px-4 py-2 font-mono text-xs text-white shadow-lg">
-                endereços mudaram · recalcule a rota
-              </div>
-            )}
-          </div>
-        </aside>
-
         {/* ---------- resultado ---------- */}
-        <div id="resultado" className="space-y-4 px-4 pb-16 pt-5 sm:px-6 lg:col-start-1 lg:row-start-2">
+        <div id="resultado" className="scroll-mt-2 space-y-3 px-4 pb-24 pt-4 md:pb-8">
           {result && (
-            <div className={`space-y-4 transition ${stale ? 'opacity-50' : ''}`}>
+            <div className={`space-y-3 transition ${stale ? 'opacity-50' : ''}`}>
               {stale && (
                 <div className="rounded-2xl bg-ink/5 px-4 py-3 text-sm text-ink print:hidden">Os endereços mudaram desde o último cálculo. Recalcule para atualizar.</div>
               )}
@@ -473,7 +456,14 @@ export default function App() {
               <p className="flex items-start gap-2 text-sm text-ink-soft">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" /> Tempo estimado sem trânsito em tempo real. Busca e rotas usam serviços públicos do OpenStreetMap, que às vezes ficam indisponíveis.
               </p>
-              <DriverSteps result={result} onHover={setHighlightLeg} onFocus={setFocus} />
+              <DriverSteps
+                result={result}
+                onHover={setHighlightLeg}
+                onFocus={(ll) => {
+                  setFocus(ll)
+                  if (window.matchMedia('(max-width: 767px)').matches) setMobileView('map')
+                }}
+              />
             </div>
           )}
           {!result && (
@@ -483,6 +473,45 @@ export default function App() {
           )}
         </div>
       </div>
+
+      {/* ---------- mapa: ocupa o resto da tela; no celular abre em tela cheia ---------- */}
+      <aside className={`print:hidden md:relative md:block md:min-w-0 md:flex-1 ${mobileView === 'map' ? 'fixed inset-0 z-[900] block' : 'hidden'}`}>
+          <div className="relative h-full w-full">
+            <MapView
+              visibleKey={mobileView}
+              points={mapPoints}
+              result={result}
+              stale={stale}
+              highlightLeg={highlightLeg}
+              focus={focus}
+              endMode={endMode}
+              canAddStop={stops.length < MAX_STOPS || stops.some((w) => !w.place && !w.query.trim())}
+              onPick={onPick}
+              onMove={onMove}
+            />
+            {stale && (
+              <div className="absolute left-1/2 top-4 z-[500] -translate-x-1/2 whitespace-nowrap rounded-full bg-ink px-4 py-2 font-mono text-xs text-white shadow-lg">
+                endereços mudaram · recalcule a rota
+              </div>
+            )}
+            <button
+              onClick={() => setMobileView('list')}
+              className="absolute bottom-6 left-1/2 z-[500] flex -translate-x-1/2 items-center gap-2 rounded-full bg-ink px-5 py-3 font-semibold text-white shadow-xl md:hidden"
+            >
+              <List className="h-4 w-4" /> Voltar à lista
+            </button>
+          </div>
+      </aside>
+
+      {mobileView === 'list' && (
+        <button
+          onClick={() => setMobileView('map')}
+          className="fixed bottom-5 left-1/2 z-[800] flex -translate-x-1/2 items-center gap-2 rounded-full bg-ink px-5 py-3 font-semibold text-white shadow-xl md:hidden print:hidden"
+        >
+          <MapIcon className="h-4 w-4" /> Ver mapa
+        </button>
+      )}
+
     </div>
   )
 }
@@ -494,9 +523,9 @@ function FieldLabel({ title, waypoint, className = '' }: { title: string; waypoi
       ? { text: 'escolha uma sugestão', cls: 'text-[#9a6a1c]' }
       : null
   return (
-    <div className={`mb-2 flex items-baseline justify-between ${className}`}>
-      <span className="font-mono text-sm uppercase tracking-[0.2em] text-ink-soft">{title}</span>
-      {status && <span className={`font-mono text-xs ${status.cls}`}>{status.text}</span>}
+    <div className={`mb-1 flex items-baseline justify-between ${className}`}>
+      <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft">{title}</span>
+      {status && <span className={`font-mono text-[10px] ${status.cls}`}>{status.text}</span>}
     </div>
   )
 }
@@ -504,15 +533,15 @@ function FieldLabel({ title, waypoint, className = '' }: { title: string; waypoi
 function Segmented<T extends string>({ label, value, onChange, options }: { label: string; value: T; onChange: (v: T) => void; options: { value: T; label: string }[] }) {
   return (
     <div>
-      <div className="mb-2 font-mono text-sm uppercase tracking-[0.2em] text-ink-soft">{label}</div>
-      <div role="radiogroup" aria-label={label} className="grid rounded-2xl bg-paper p-1" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
+      <div className="mb-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft">{label}</div>
+      <div role="radiogroup" aria-label={label} className="grid rounded-xl bg-paper p-1" style={{ gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))` }}>
         {options.map((o) => (
           <button
             key={o.value}
             role="radio"
             aria-checked={value === o.value}
             onClick={() => onChange(o.value)}
-            className={`rounded-xl px-2 py-2 text-[15px] font-medium transition ${value === o.value ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`}
+            className={`rounded-lg px-2 py-1.5 text-sm font-medium transition ${value === o.value ? 'bg-white text-ink shadow-sm' : 'text-ink-soft hover:text-ink'}`}
           >
             {o.label}
           </button>
@@ -540,8 +569,8 @@ function StopRow({ waypoint, index, total, bias, autoFocus, onPatch, onMove, onR
     <div ref={setNodeRef} style={style} className={isDragging ? 'opacity-80' : ''}>
       <FieldLabel title={`Parada ${index + 1}`} waypoint={waypoint} />
       <div className="flex items-center gap-1">
-        <button {...attributes} {...listeners} className="cursor-grab touch-none rounded p-1 text-ink-soft hover:text-ink active:cursor-grabbing" aria-label={`Arrastar parada ${index + 1}`}>
-          <GripVertical className="h-5 w-5" />
+        <button {...attributes} {...listeners} className="cursor-grab touch-none rounded p-0.5 text-ink-soft hover:text-ink active:cursor-grabbing" aria-label={`Arrastar parada ${index + 1}`}>
+          <GripVertical className="h-4 w-4" />
         </button>
         <div className="min-w-0 flex-1">
           <AddressInput
@@ -558,13 +587,13 @@ function StopRow({ waypoint, index, total, bias, autoFocus, onPatch, onMove, onR
         </div>
         <div className="flex shrink-0 items-center">
           <IconBtn label="Subir parada" disabled={index === 0} onClick={() => onMove(-1)}>
-            <ArrowUp className="h-5 w-5" />
+            <ArrowUp className="h-4 w-4" />
           </IconBtn>
           <IconBtn label="Descer parada" disabled={index === total - 1} onClick={() => onMove(1)}>
-            <ArrowDown className="h-5 w-5" />
+            <ArrowDown className="h-4 w-4" />
           </IconBtn>
           <IconBtn label="Remover parada" onClick={onRemove}>
-            <Trash2 className="h-5 w-5" />
+            <Trash2 className="h-4 w-4" />
           </IconBtn>
         </div>
       </div>
@@ -574,7 +603,7 @@ function StopRow({ waypoint, index, total, bias, autoFocus, onPatch, onMove, onR
 
 function IconBtn({ label, disabled, onClick, children }: { label: string; disabled?: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button onClick={onClick} disabled={disabled} aria-label={label} title={label} className="rounded-lg p-1.5 text-ink hover:bg-paper disabled:text-ink-soft/30 disabled:hover:bg-transparent">
+    <button onClick={onClick} disabled={disabled} aria-label={label} title={label} className="rounded-lg p-1 text-ink hover:bg-paper disabled:text-ink-soft/30 disabled:hover:bg-transparent">
       {children}
     </button>
   )

@@ -23,11 +23,11 @@ export function CostPanel({ result, settings, manualToll, onSettings, onManualTo
   const people = Math.max(1, Math.round(settings.people))
 
   return (
-    <section className="rounded-3xl border border-paper-line bg-paper-card p-5" aria-label="Custo da viagem">
+    <section className="rounded-2xl border border-paper-line bg-paper-card p-4" aria-label="Custo da viagem">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="font-mono text-xs uppercase tracking-[0.2em] text-ink-soft">custo da viagem</h3>
-          <div className="mt-2 text-4xl font-extrabold tracking-tight text-ink" data-testid="cost-total">
+          <h3 className="font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft">custo da viagem</h3>
+          <div className="mt-1 text-3xl font-extrabold tracking-tight text-ink" data-testid="cost-total">
             {formatMoney(cost.total)}
           </div>
           <div className="mt-1 font-mono text-xs text-ink-soft">
@@ -44,7 +44,7 @@ export function CostPanel({ result, settings, manualToll, onSettings, onManualTo
         </button>
       </div>
 
-      <dl className="mt-4 divide-y divide-paper-line rounded-2xl bg-white/70">
+      <dl className="mt-3 divide-y divide-paper-line rounded-2xl bg-white/70">
         <Row icon={<Fuel className="h-4 w-4" />} label="Combustível" value={formatMoney(cost.fuelCost)}>
           {liters.format(cost.fuelAmount)} {fuel.unit} de {fuel.label.toLowerCase()} · {liters.format(settings.consumption)} km/{fuel.unit} · {formatMoney(settings.price)}/{fuel.unit}
         </Row>
@@ -71,7 +71,7 @@ export function CostPanel({ result, settings, manualToll, onSettings, onManualTo
       )}
 
       {open && (
-        <div className="mt-4 grid gap-4 border-t border-paper-line pt-4 print:hidden">
+        <div className="mt-3 grid gap-3 border-t border-paper-line pt-3 print:hidden">
           <div>
             <div className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-ink-soft">combustível</div>
             <div role="radiogroup" aria-label="Combustível" className="grid grid-cols-4 rounded-2xl bg-paper p-1">
@@ -139,7 +139,7 @@ export function CostPanel({ result, settings, manualToll, onSettings, onManualTo
 
 function Row({ icon, label, value, children }: { icon: React.ReactNode; label: string; value: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-3 px-4 py-3">
+    <div className="flex items-start gap-3 px-3 py-2.5 text-sm">
       <span className="mt-0.5 text-sun">{icon}</span>
       <div className="min-w-0 flex-1">
         <dt className="font-medium text-ink-deep">{label}</dt>

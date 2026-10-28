@@ -10,6 +10,7 @@ Planeje uma rota com até 25 paradas, veja no mapa e deixe o sistema encontrar a
 | Três formas de terminar | **Destino fixo**, **volta à partida** (circuito) ou **melhor final** (o sistema escolhe a última parada). |
 | Otimização | Por **menor tempo** ou **menor distância**. Até 12 paradas o resultado é o ótimo exato (programação dinâmica Held-Karp); acima disso, vizinho mais próximo com melhorias 2-opt e or-opt. Nunca entrega uma ordem pior que a digitada. |
 | Comparação | Mostra quanto a ordem otimizada economiza frente à digitada, e diz claramente quando a ordem digitada já era a melhor. Um clique reordena os campos na sequência otimizada. |
+| Layout de app web | No computador e no tablet, painel lateral com rolagem própria e mapa em tela cheia ao lado. No celular, botão “Ver mapa” abre o mapa em tela cheia. |
 | Mapa interativo | Clique no mapa para adicionar parada, partida ou destino. Arraste os pinos para ajustar o ponto exato. Passe o mouse num trecho para destacá-lo. |
 | Trajeto do motorista | Instruções curva a curva em português, por trecho, com código da rodovia e sentido. Clique numa instrução para vê-la no mapa. |
 | Custo da viagem | Combustível (gasolina, etanol, diesel ou GNV, com consumo e preço editáveis) mais pedágio, com custo por km e divisão entre pessoas. Entra no resumo, na comparação de ordens e no texto do WhatsApp. |
@@ -20,7 +21,7 @@ Planeje uma rota com até 25 paradas, veja no mapa e deixe o sistema encontrar a
 ## Stack
 
 - React 18, TypeScript, Vite, Tailwind CSS
-- Leaflet com mapa CARTO/OpenStreetMap
+- Leaflet com tiles do OpenStreetMap (sem chave; reserva automática no OSM France)
 - [OSRM](https://project-osrm.org/) para rotas e matriz de tempos/distâncias
 - [Photon](https://photon.komoot.io/) para busca e geocodificação reversa
 - Sem backend, sem chave de API, sem custo
