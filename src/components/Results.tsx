@@ -4,10 +4,11 @@ import type { RouteResult } from '../types'
 import { formatDistance, formatDuration, splitDistance } from '../lib/format'
 import { googleMapsLinks, wazeLink, whatsappLink } from '../lib/share'
 import { Badge } from './AddressInput'
+import { fuelCostFor, formatMoney, type CostSettings } from '../lib/cost'
 
 const variantOf = (tag: string, i: number, last: number) => (i === 0 || (tag === 'A' && i === last) ? 'origin' : tag === 'B' ? 'dest' : 'stop')
 
-export function Summary({ result }: { result: RouteResult }) {
+export function Summary({ result, cost }: { result: RouteResult; cost: number }) {
   const [value, unit] = splitDistance(result.distance)
   const label = result.optimized ? `otimizada · ${result.criterion === 'duration' ? 'menor tempo' : 'menor distância'}` : 'ordem digitada'
   return (
@@ -23,18 +24,24 @@ export function Summary({ result }: { result: RouteResult }) {
         <div className="font-mono text-[11px] uppercase tracking-[0.2em] text-white/70">tempo estimado</div>
         <div className="mt-2 text-3xl font-extrabold tracking-tight text-sun sm:text-4xl">{formatDuration(result.duration)}</div>
       </div>
+      <div className="col-span-2 flex items-baseline justify-between gap-3 border-t border-white/15 px-5 py-3 sm:px-6">
+        <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-white/70">custo estimado</span>
+        <span className="text-2xl font-extrabold tracking-tight">{formatMoney(cost)}</span>
+      </div>
       <div className="col-span-2 border-t border-white/15 px-5 py-2.5 font-mono text-[11px] uppercase tracking-[0.18em] text-white/60 sm:px-6">
         {label} · {result.legs.length} {result.legs.length === 1 ? 'trecho' : 'trechos'}
+        {result.avoidTolls ? ' · sem pedágio' : ''}
       </div>
     </section>
   )
 }
 
-export function Comparison({ result, onApply }: { result: RouteResult; onApply: () => void }) {
+export function Comparison({ result, settings, onApply }: { result: RouteResult; settings: CostSettings; onApply: () => void }) {
   const c = result.comparison
   if (!c) return null
   const savedTime = c.original.duration - c.chosen.duration
   const savedDist = c.original.distance - c.chosen.distance
+  const savedFuel = fuelCostFor(savedDist, settings)
 
   if (!c.orderChanged) {
     return (
@@ -51,6 +58,7 @@ export function Comparison({ result, onApply }: { result: RouteResult; onApply: 
   const gains = [
     savedTime >= 30 && <strong key="t">{formatDuration(savedTime)}</strong>,
     savedDist >= 50 && <strong key="d">{formatDistance(savedDist)}</strong>,
+    savedFuel >= 0.5 && <strong key="f">{formatMoney(savedFuel)} de combustível</strong>,
   ].filter(Boolean)
 
   return (
@@ -61,7 +69,7 @@ export function Comparison({ result, onApply }: { result: RouteResult; onApply: 
       <p className="mt-2 text-[17px] text-ink-deep">
         {gains.length ? (
           <>
-            Economia de {gains.reduce<React.ReactNode[]>((acc, g, i) => (i ? [...acc, ' e ', g] : [g]), [])} em relação à ordem digitada.
+            Economia de {gains.reduce<React.ReactNode[]>((acc, g, i) => (i ? [...acc, i === gains.length - 1 ? ' e ' : ', ', g] : [g]), [])} em relação à ordem digitada.
           </>
         ) : (
           <>Ganho pequeno em relação à ordem digitada: as duas sequências são praticamente equivalentes.</>
@@ -133,6 +141,8 @@ export function Itinerary({ result, onHover }: { result: RouteResult; onHover: (
                   className="my-2 inline-block rounded-full bg-paper px-3 py-1 font-mono text-[12px] text-ink-soft"
                 >
                   ↓ {formatDistance(leg.distance)} · {formatDuration(leg.duration)}
+                  {leg.tollDistance >= 500 && <span className="ml-1.5 text-[#9a6a1c]">· pedágio</span>}
+                  {leg.hasFerry && <span className="ml-1.5 text-[#9a6a1c]">· balsa</span>}
                 </div>
               )}
               {!leg && <div className="h-1" />}
@@ -144,7 +154,7 @@ export function Itinerary({ result, onHover }: { result: RouteResult; onHover: (
   )
 }
 
-export function ExportPanel({ result, shareUrl }: { result: RouteResult; shareUrl: string }) {
+export function ExportPanel({ result, shareUrl, costLine }: { result: RouteResult; shareUrl: string; costLine: string }) {
   const links = googleMapsLinks(result.sequence)
   const [copied, setCopied] = useState(false)
   const copy = async () => {
@@ -178,7 +188,7 @@ export function ExportPanel({ result, shareUrl }: { result: RouteResult; shareUr
           <p className="text-xs text-ink-soft">O Google Maps aceita até 9 paradas por link, então a rota foi dividida em partes encadeadas.</p>
         )}
         <div className="grid grid-cols-3 gap-2">
-          <a href={whatsappLink(result)} target="_blank" rel="noreferrer" className="export-btn">
+          <a href={whatsappLink(result, costLine)} target="_blank" rel="noreferrer" className="export-btn">
             <Share2 className="h-4 w-4" /> WhatsApp
           </a>
           <button onClick={copy} className="export-btn">
@@ -222,6 +232,9 @@ export function DriverSteps({ result, onHover, onFocus }: { result: RouteResult;
                     <span className="text-ink-soft">
                       {formatDistance(leg.distance)} · {formatDuration(leg.duration)}
                     </span>
+                    {leg.tollDistance >= 500 && (
+                      <span className="rounded-full bg-sun-soft px-2 py-0.5 font-mono text-[11px] text-[#9a6a1c]">pedágio · {formatDistance(leg.tollDistance)}</span>
+                    )}
                   </div>
                   <div className="truncate text-sm text-ink-soft">
                     {leg.from.label} → {leg.to.label}

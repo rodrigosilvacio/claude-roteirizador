@@ -7,12 +7,25 @@ import type { Criterion, EndMode, Place, RouteResult, Waypoint } from './types'
 import { AddressInput, Badge } from './components/AddressInput'
 import { MapView, type MapPoint } from './components/MapView'
 import { Comparison, DriverSteps, ExportPanel, Itinerary, Summary } from './components/Results'
+import { CostPanel } from './components/CostPanel'
+import { DEFAULT_COST, FUEL_PRESETS, VEHICLES, computeCost, formatMoney, type CostSettings } from './lib/cost'
 import { MAX_STOPS, computePlan, validate } from './lib/planner'
 import { reversePlace } from './lib/geocode'
 import { EXAMPLES, type Example } from './lib/examples'
 import { decodePlan, encodePlan, unpack } from './lib/share'
 
 const STORAGE_KEY = 'rota:v1'
+const COST_KEY = 'rota:custos:v1'
+
+function loadCost(): CostSettings {
+  try {
+    const s = JSON.parse(localStorage.getItem(COST_KEY) ?? 'null') as Partial<CostSettings> | null
+    if (s && s.fuel && s.fuel in FUEL_PRESETS && s.vehicle && s.vehicle in VEHICLES) return { ...DEFAULT_COST, ...s }
+  } catch {
+    /* usa os valores de referência */
+  }
+  return DEFAULT_COST
+}
 
 let seq = 0
 const uid = () => `w${Date.now().toString(36)}${(seq++).toString(36)}`
@@ -24,10 +37,11 @@ interface PlanState {
   destination: Waypoint
   endMode: EndMode
   criterion: Criterion
+  avoidTolls?: boolean
 }
 
 function emptyPlan(): PlanState {
-  return { origin: wp(), stops: [wp()], destination: wp(), endMode: 'fixed', criterion: 'duration' }
+  return { origin: wp(), stops: [wp()], destination: wp(), endMode: 'fixed', criterion: 'duration', avoidTolls: false }
 }
 
 function loadInitial(): PlanState {
@@ -43,6 +57,7 @@ function loadInitial(): PlanState {
         destination: wp(unpack(plan.d)),
         endMode: (['fixed', 'roundtrip', 'free'].includes(plan.e) ? plan.e : 'fixed') as EndMode,
         criterion: plan.c === 'distance' ? 'distance' : 'duration',
+        avoidTolls: plan.t === 1,
       }
     }
   }
@@ -61,7 +76,7 @@ function loadInitial(): PlanState {
 /** Assinatura dos dados que afetam o cálculo, para saber se o resultado está desatualizado */
 function signature(s: PlanState, optimized: boolean) {
   const pt = (w: Waypoint) => (w.place ? `${w.place.lat.toFixed(5)},${w.place.lon.toFixed(5)}` : '-')
-  return [pt(s.origin), ...s.stops.map(pt), s.endMode === 'fixed' ? pt(s.destination) : '', s.endMode, optimized ? s.criterion : ''].join('|')
+  return [pt(s.origin), ...s.stops.map(pt), s.endMode === 'fixed' ? pt(s.destination) : '', s.endMode, optimized ? s.criterion : '', s.avoidTolls ? 'sem-pedagio' : ''].join('|')
 }
 
 export default function App() {
@@ -73,6 +88,17 @@ export default function App() {
   const [highlightLeg, setHighlightLeg] = useState<number | null>(null)
   const [focus, setFocus] = useState<[number, number] | null>(null)
   const [locating, setLocating] = useState(false)
+  const [costSettings, setCostSettings] = useState<CostSettings>(loadCost)
+  // valor real informado vale só para a rota calculada
+  const [manualToll, setManualToll] = useState<number | null>(null)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(COST_KEY, JSON.stringify(costSettings))
+    } catch {
+      /* sem persistência */
+    }
+  }, [costSettings])
 
   useEffect(() => {
     try {
@@ -83,6 +109,7 @@ export default function App() {
   }, [plan])
 
   const { origin, stops, destination, endMode, criterion } = plan
+  const avoidTolls = !!plan.avoidTolls
   const stale = !!result && resultSig !== signature(plan, result.optimized)
 
   const update = (fn: (s: PlanState) => PlanState) => {
@@ -110,6 +137,7 @@ export default function App() {
     try {
       const r = await computePlan(plan, optimize)
       setResult(r)
+      setManualToll(null)
       setResultSig(signature(plan, r.optimized))
       setHighlightLeg(null)
       if (window.innerWidth < 1024) setTimeout(() => document.getElementById('resultado')?.scrollIntoView({ behavior: 'smooth' }), 50)
@@ -131,7 +159,7 @@ export default function App() {
   const loadExample = (ex: Example) => {
     setResult(null)
     setError(null)
-    setPlan({ origin: wp(ex.origin), stops: ex.stops.map((p) => wp(p)), destination: wp(ex.destination), endMode: ex.endMode, criterion: ex.criterion })
+    setPlan((s) => ({ origin: wp(ex.origin), stops: ex.stops.map((p) => wp(p)), destination: wp(ex.destination), endMode: ex.endMode, criterion: ex.criterion, avoidTolls: s.avoidTolls }))
   }
 
   const reset = () => {
@@ -207,9 +235,17 @@ export default function App() {
         endMode === 'fixed' ? destination.place : null,
         endMode,
         criterion,
+        avoidTolls,
       )}`,
-    [origin, stops, destination, endMode, criterion],
+    [origin, stops, destination, endMode, criterion, avoidTolls],
   )
+
+  const cost = result ? computeCost(result.distance, result.tollDistance, costSettings, manualToll) : null
+  const costLine = cost
+    ? `Custo estimado: ${formatMoney(cost.total)} (combustível ${formatMoney(cost.fuelCost)} + pedágio ${formatMoney(cost.tollCost)})${
+        costSettings.people > 1 ? ` · ${formatMoney(cost.perPerson)} por pessoa` : ''
+      }`
+    : ''
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }))
   const onDragEnd = (e: DragEndEvent) => {
@@ -339,6 +375,15 @@ export default function App() {
                   { value: 'distance', label: 'Menor distância' },
                 ]}
               />
+              <label className="mt-3 flex cursor-pointer items-center gap-3 text-[15px] text-ink-deep">
+                <input
+                  type="checkbox"
+                  checked={avoidTolls}
+                  onChange={(e) => update((s) => ({ ...s, avoidTolls: e.target.checked }))}
+                  className="h-5 w-5 rounded border-paper-line accent-[#26495c]"
+                />
+                Evitar pedágios
+              </label>
             </div>
 
             {error && (
@@ -420,10 +465,11 @@ export default function App() {
               {stale && (
                 <div className="rounded-2xl bg-ink/5 px-4 py-3 text-sm text-ink print:hidden">Os endereços mudaram desde o último cálculo. Recalcule para atualizar.</div>
               )}
-              <Summary result={result} />
-              <Comparison result={result} onApply={applyOptimizedOrder} />
+              <Summary result={result} cost={cost!.total} />
+              <Comparison result={result} settings={costSettings} onApply={applyOptimizedOrder} />
+              <CostPanel result={result} settings={costSettings} manualToll={manualToll} onSettings={setCostSettings} onManualToll={setManualToll} />
               <Itinerary result={result} onHover={setHighlightLeg} />
-              <ExportPanel result={result} shareUrl={shareUrl} />
+              <ExportPanel result={result} shareUrl={shareUrl} costLine={costLine} />
               <p className="flex items-start gap-2 text-sm text-ink-soft">
                 <Info className="mt-0.5 h-4 w-4 shrink-0" /> Tempo estimado sem trânsito em tempo real. Busca e rotas usam serviços públicos do OpenStreetMap, que às vezes ficam indisponíveis.
               </p>

@@ -30,3 +30,12 @@ describe('describeStep', () => {
     expect(describeStep(step({ type: 'arrive', modifier: 'left' }), 'Campinas')).toBe('Chegada em Campinas, à esquerda')
   })
 })
+
+describe('classShare', async () => {
+  const { classShare } = await import('./osrm')
+  it('calcula a fração do passo em via pedagiada', () => {
+    expect(classShare({ intersections: [{ classes: ['toll', 'motorway'] }, { classes: ['motorway'] }] }, 'toll')).toBe(0.5)
+    expect(classShare({ intersections: [{}] }, 'toll')).toBe(0)
+    expect(classShare({}, 'toll')).toBe(0)
+  })
+})
