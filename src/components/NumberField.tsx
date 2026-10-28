@@ -12,11 +12,13 @@ export function NumberField({
   prefix,
   suffix,
   invalid,
+  id,
 }: {
   label: string
   prefix?: string
   suffix?: string
   invalid?: boolean
+  id?: string
   value: number | null
   onChange: (v: number | null) => void
   placeholder?: string
@@ -37,6 +39,7 @@ export function NumberField({
       >
         {prefix && <span className="font-mono text-xs text-ink-soft">{prefix}</span>}
         <input
+          id={id}
           inputMode="decimal"
         value={text}
         placeholder={placeholder}

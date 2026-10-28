@@ -8,7 +8,7 @@ import { AddressInput, Badge } from './components/AddressInput'
 import { MapView, type MapPoint } from './components/MapView'
 import { Comparison, DriverSteps, ExportPanel, Itinerary, Summary } from './components/Results'
 import { CostPanel } from './components/CostPanel'
-import { VehicleCard } from './components/VehicleCard'
+import { CONSUMPTION_INPUT_ID, VehicleCard } from './components/VehicleCard'
 import { DEFAULT_COST, FUEL_PRESETS, VEHICLES, computeCost, formatMoney, inferCustom, type CostSettings } from './lib/cost'
 import { MAX_STOPS, computePlan, validate } from './lib/planner'
 import { reversePlace } from './lib/geocode'
@@ -456,7 +456,14 @@ export default function App() {
               )}
               <Summary result={result} cost={cost!.total} />
               <Comparison result={result} settings={costSettings} onApply={applyOptimizedOrder} />
-              <CostPanel result={result} settings={costSettings} manualToll={manualToll} onSettings={setCostSettings} onManualToll={setManualToll} />
+              <CostPanel result={result} settings={costSettings} manualToll={manualToll} onSettings={setCostSettings}
+                onManualToll={setManualToll}
+                onEditCar={() => {
+                  const input = document.getElementById(CONSUMPTION_INPUT_ID)
+                  input?.closest('[role="group"]')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+                  input?.focus({ preventScroll: true })
+                }}
+              />
               <Itinerary result={result} onHover={setHighlightLeg} />
               <ExportPanel result={result} shareUrl={shareUrl} costLine={costLine} />
               <p className="flex items-start gap-2 text-sm text-ink-soft">

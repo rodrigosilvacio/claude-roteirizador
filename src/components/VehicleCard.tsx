@@ -2,6 +2,8 @@ import { Car } from 'lucide-react'
 import { CONSUMPTION_RANGE, FUEL_PRESETS, PRICE_RANGE, formatMoney, fuelCostPerKm, fuelWarning, type CostSettings, type FuelType } from '../lib/cost'
 import { NumberField } from './NumberField'
 
+export const CONSUMPTION_INPUT_ID = 'consumo-carro'
+
 /** Consumo e preço do combustível do próprio carro, visíveis antes de calcular a rota */
 export function VehicleCard({ settings, onChange }: { settings: CostSettings; onChange: (s: CostSettings) => void }) {
   const fuel = FUEL_PRESETS[settings.fuel]
@@ -10,7 +12,7 @@ export function VehicleCard({ settings, onChange }: { settings: CostSettings; on
   const set = (patch: Partial<CostSettings>) => onChange({ ...settings, ...patch, custom: true })
 
   return (
-    <div className="mt-4 rounded-2xl border border-paper-line bg-paper/60 p-3" aria-label="Seu carro" role="group">
+    <div className="mt-4 scroll-mt-4 rounded-2xl border border-paper-line bg-paper/60 p-3" aria-label="Seu carro" role="group">
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 font-mono text-[11px] uppercase tracking-[0.2em] text-ink-soft">
           <Car className="h-3.5 w-3.5" /> seu carro
@@ -40,6 +42,7 @@ export function VehicleCard({ settings, onChange }: { settings: CostSettings; on
 
       <div className="mt-2 grid grid-cols-2 gap-2">
         <NumberField
+          id={CONSUMPTION_INPUT_ID}
           label={`Faz quantos km por ${unitName}`}
           value={settings.consumption}
           suffix={`km/${fuel.unit}`}
